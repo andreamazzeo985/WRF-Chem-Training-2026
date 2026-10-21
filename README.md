@@ -21,38 +21,9 @@ The repository provides a prepared installation package containing WRF-Chem and 
 
 The repository provides course documentation and access to a downloadable student installation package.
 
-The installation package is distributed through GitHub Releases rather than as an ordinary repository file.
-
-Student installation package
-
-Package: WRF-Chem_Course_Student_Package.tgz
-
-Release tag: WRFchem
-
-Approximate download size: 105 MB
-
-The package includes:
-
-WRF-Chem_Course_Student_Package.tgz
-│
-├── set_env.sh
-│
-├── scripts/
-│   ├── install_netcdf.sh
-│   ├── configure_wrfchem.sh
-│   ├── compile_wrfchem.sbatch
-│   ├── configure_wps.sh
-│   ├── compile_wps.sbatch
-│   ├── check_installation.sh
-│   ├── prepare_from_working_install.sh
-│   └── package_wps_source.sh
-│
-└── package/
-    ├── WRFV4.5.2_Course_Source.tgz
-    ├── WPS-4.5_Course_Source.tgz
-    └── GRIB2_Course_Libraries.tgz
-
 The source archives contain the prepared software needed for the training installation.
+
+
 
 Software Attribution, Licensing and Disclaimer
 
@@ -69,3 +40,27 @@ Any ERA2GRIB-related material included in this repository is intended for educat
 This repository is independently maintained for teaching and research training purposes and is not officially affiliated with, endorsed by or maintained by NCAR, UCAR or the original developers of the third-party software.
 
 Users should consult the original software documentation and licence notices before redistributing or modifying individual components.
+
+
+## ERA5 Meteorological Data Processing — Modified NCAR era5_to_int
+
+This repository includes a modified implementation of the NCAR `era5_to_int` software, developed to simplify the preparation of ERA5 meteorological forcing data for WRF and WRF-Chem simulations.
+
+The original software was developed by the National Center for Atmospheric Research (NCAR) and is available at:
+
+https://github.com/NCAR/era5_to_int
+
+For the WRF-Chem Training 2026 course, the original workflow has been extended to integrate automated meteorological data retrieval and conversion within a single execution procedure.
+
+The modifications include:
+
+- Automated downloading of the required ERA5 meteorological input files.
+- Integration of the download and conversion stages into a single workflow.
+- Additional file handling and download checks.
+- Adaptation of the execution procedure for the Lancaster University Wayland HPC environment.
+
+The modified software is used to allow students to prepare the WPS intermediate files required by `metgrid.exe`.
+
+**Licensing and attribution:** The modified implementation is derived from NCAR's `era5_to_int`, distributed under the Apache License, Version 2.0. Original copyright and licence notices are retained. Modifications introduced for the WRF-Chem Training 2026 course are independently maintained and are not an official NCAR release.
+
+ERA5 data access and use remain subject to the applicable data-provider terms and conditions.
