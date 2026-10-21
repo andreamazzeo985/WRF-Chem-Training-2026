@@ -1,9 +1,10 @@
-# WRF-Chem-Training-2026
+## WRF-Chem-Training-2026
 WRF-Chem Training 2026
 
 Installation, Configuration and Introduction to Atmospheric Chemistry Modelling with WRF-Chem v4.5.2
 
 Lancaster University | WRF-Chem Training Course | 2026
+
 Author of the course: Dr Andrea Mazzeo a.mazzeo@lancaster.ac.uk
 
 Overview
@@ -25,7 +26,7 @@ The source archives contain the prepared software needed for the training instal
 
 
 
-Software Attribution, Licensing and Disclaimer
+## Software Attribution, Licensing and Disclaimer
 
 This repository provides educational materials and installation resources for training in atmospheric modelling using WRF-Chem.
 
