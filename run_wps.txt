@@ -1,0 +1,46 @@
+#!/bin/bash
+
+#SBATCH -p parallel
+#SBATCH --exclusive
+#SBATCH --nodes=1
+#SBATCH -J WPS 
+#SBATCH -C node_type=64core256G
+#SBATCH -o outlogs/log.out
+########SBATCH --mail-type=END,FAIL 
+########SBATCH --mail-user=a.mazzeo@lancaster.ac.uk
+
+ulimit -s unlimited
+ulimit -c unlimited
+
+# -----------------------
+# Set OpenMP threads
+# -----------------------
+#source /storage/hpc/46/mazzeo/pgm/Models/WRF-Chem_Course/set_env.sh
+
+module load wrf/test
+
+export OMP_NUM_THREADS=1
+
+
+# ---------------------------------------
+# 4. Print configuration
+# ---------------------------------------
+
+echo "========================================"
+echo "WRF-Chem 4.5.2 parallel test"
+echo "========================================"
+echo "Job ID: $SLURM_JOB_ID"
+echo "Node: $(hostname)"
+echo "MPI tasks: $SLURM_NTASKS"
+echo "OpenMP threads: $OMP_NUM_THREADS"
+echo "Simulation directory: $SIM_DIR"
+echo "WRF installation: $WRF_DIR"
+echo "Start: $(date)"
+echo "========================================"
+
+which mpirun
+mpirun --version | head -2
+
+./geogrid.exe
+#./ungrib.exe
+#./metgrid.exe

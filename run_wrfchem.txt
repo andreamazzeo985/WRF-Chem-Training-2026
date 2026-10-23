@@ -1,0 +1,71 @@
+#!/bin/bash
+
+#SBATCH -p parallel
+#SBATCH --exclusive
+#SBATCH --nodes=1
+#SBATCH -J WRFChem 
+#SBATCH -C node_type=64core256G
+#SBATCH -o outlogs/log.out
+########SBATCH --mail-type=END,FAIL 
+########SBATCH --mail-user=a.mazzeo@lancaster.ac.uk
+
+ulimit -s unlimited
+ulimit -c unlimited
+
+# -----------------------
+# Set OpenMP threads
+# -----------------------
+#source /storage/hpc/46/mazzeo/pgm/Models/WRF-Chem_Course/set_env.sh
+
+module load wrf/test
+
+export OMP_NUM_THREADS=1
+
+
+# ---------------------------------------
+# 2. Simulation directory
+# ---------------------------------------
+export SIM_DIR=/home/hpc/46/mazzeo/scratch/wrf-chem/simuldir/WRF-Chem_Course_test
+cd "$SIM_DIR"
+
+if [ ! -x ./wrf.exe ]; then
+    echo "ERROR: wrf.exe is missing or not executable"
+    exit 1
+fi
+
+if [ ! -f wrfinput_d01 ] || [ ! -f wrfbdy_d01 ]; then
+    echo "ERROR: WRF initial or boundary conditions are missing"
+    exit 1
+fi
+
+# ---------------------------------------
+# 4. Print configuration
+# ---------------------------------------
+
+echo "========================================"
+echo "WRF-Chem 4.5.2 parallel test"
+echo "========================================"
+echo "Job ID: $SLURM_JOB_ID"
+echo "Node: $(hostname)"
+echo "MPI tasks: $SLURM_NTASKS"
+echo "OpenMP threads: $OMP_NUM_THREADS"
+echo "Simulation directory: $SIM_DIR"
+echo "WRF installation: $WRF_DIR"
+echo "Start: $(date)"
+echo "========================================"
+
+which mpirun
+mpirun --version | head -2
+
+ln -sfn "$WRF_DIR/run/MPTABLE.TBL" MPTABLE.TBL
+ln -sfn "$WRF_DIR/main/ndown.exe" ndown.exe
+ln -sfn "$WRF_DIR/main/tc.exe" tc.exe
+ln -sf CAMtr_volume_mixing_ratio.SSP245 CAMtr_volume_mixing_ratio
+
+#./real.exe 
+
+# ---------------------------------------
+# 5. Run WRF-Chem
+# ---------------------------------------
+
+mpirun -np "$SLURM_NTASKS" ./wrf.exe
