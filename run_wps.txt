@@ -1,46 +1,114 @@
 #!/bin/bash
 
 #SBATCH -p parallel
-#SBATCH --exclusive
 #SBATCH --nodes=1
-#SBATCH -J WPS 
-#SBATCH -C node_type=64core256G
-#SBATCH -o outlogs/log.out
-########SBATCH --mail-type=END,FAIL 
-########SBATCH --mail-user=a.mazzeo@lancaster.ac.uk
+#SBATCH --ntasks=16
+#SBATCH -J WPS_Course
+#SBATCH -o wps_%j.out
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=a.mazzeo@lancaster.ac.uk
+
+#set -euo pipefail
 
 ulimit -s unlimited
-ulimit -c unlimited
-
-# -----------------------
-# Set OpenMP threads
-# -----------------------
-#source /storage/hpc/46/mazzeo/pgm/Models/WRF-Chem_Course/set_env.sh
-
-module load wrf/test
-
 export OMP_NUM_THREADS=1
 
+# ---------------------------------------
+# 1. Load WPS environment
+# ---------------------------------------
+
+# Use the independent course installation
+source /home/hpc/46/mazzeo/storage/pgm/Models/WRF-Chem_Course_Student/set_env.sh
 
 # ---------------------------------------
-# 4. Print configuration
+# 2. Define directories
 # ---------------------------------------
 
+export WPS_DIR="/home/hpc/46/mazzeo/storage/pgm/Models/WRF-Chem_Course_Student/WPS-4.5"
+
+# Directory containing namelist.wps,
+# GRIBFILE links and Vtable
+export RUN_DIR="/home/hpc/46/mazzeo/scratch/wrf-chem/simuldir/WPS/"
+export NAMELIST_DIR="/home/hpc/46/mazzeo/scratch/wrf-chem/simuldir/WPS/"
+
+cd "$RUN_DIR"
+
+# ---------------------------------------
+# 3. Check executables and input files
+# ---------------------------------------
+
+for exe in geogrid.exe ungrib.exe metgrid.exe; do
+    if [ ! -x "$WPS_DIR/$exe" ]; then
+        echo "ERROR: Missing executable: $WPS_DIR/$exe"
+        exit 1
+    fi
+done
+
+echo "Preparing WPS simulation directory..."
+
+# Copy WPS configuration
+if [ ! -f namelist.wps ]; then
+    cp "$WPS_DIR/namelist.wps" .
+fi
+
+# Link the WPS executables
+for exe in geogrid.exe ungrib.exe metgrid.exe; do
+    if [ ! -x "$WPS_DIR/$exe" ]; then
+        echo "ERROR: Missing WPS executable: $WPS_DIR/$exe"
+        exit 1
+    fi
+    ln -sfn "$WPS_DIR/$exe" "$RUN_DIR/$exe"
+done
+
+ln -sfn "$WPS_DIR/geogrid" geogrid
+ln -sfn "$WPS_DIR/ungrib" ungrib
+ln -sfn "$WPS_DIR/metgrid" metgrid
+
+echo "WPS directory prepared."
+
 echo "========================================"
-echo "WRF-Chem 4.5.2 parallel test"
+echo "WPS COURSE PREPROCESSING"
 echo "========================================"
-echo "Job ID: $SLURM_JOB_ID"
+echo "Job ID: ${SLURM_JOB_ID}"
 echo "Node: $(hostname)"
-echo "MPI tasks: $SLURM_NTASKS"
-echo "OpenMP threads: $OMP_NUM_THREADS"
-echo "Simulation directory: $SIM_DIR"
-echo "WRF installation: $WRF_DIR"
+echo "MPI tasks: ${SLURM_NTASKS}"
+echo "WPS directory: $WPS_DIR"
+echo "Run directory: $RUN_DIR"
 echo "Start: $(date)"
 echo "========================================"
 
-which mpirun
-mpirun --version | head -2
+# ---------------------------------------
+# 4. GEOGRID
+# ---------------------------------------
 
+echo "Starting GEOGRID: $(date)"
+
+#mpirun -np "$SLURM_NTASKS" ./geogrid.exe \
+#    > geogrid.stdout 2>&1
 ./geogrid.exe
-#./ungrib.exe
-#./metgrid.exe
+echo "GEOGRID completed: $(date)"
+
+# ---------------------------------------
+# 5. UNGRIB (serial)
+# ---------------------------------------
+
+#echo "Starting UNGRIB: $(date)"
+
+#./ungrib.exe > ungrib.stdout 2>&1
+
+#echo "UNGRIB completed: $(date)"
+
+# ---------------------------------------
+# 6. METGRID
+# ---------------------------------------
+
+#echo "Starting METGRID: $(date)"
+
+#mpirun -np "$SLURM_NTASKS" ./metgrid.exe \
+#    > metgrid.stdout 2>&1
+#
+#echo "METGRID completed: $(date)"
+
+
+
+
