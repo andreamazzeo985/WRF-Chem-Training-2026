@@ -82,9 +82,6 @@ echo "========================================"
 # ---------------------------------------
 
 echo "Starting GEOGRID: $(date)"
-
-#mpirun -np "$SLURM_NTASKS" ./geogrid.exe \
-#    > geogrid.stdout 2>&1
 ./geogrid.exe
 echo "GEOGRID completed: $(date)"
 
@@ -103,9 +100,7 @@ echo "GEOGRID completed: $(date)"
 # ---------------------------------------
 
 #echo "Starting METGRID: $(date)"
-
-#mpirun -np "$SLURM_NTASKS" ./metgrid.exe \
-#    > metgrid.stdout 2>&1
+./metgrid.exe
 #
 #echo "METGRID completed: $(date)"
 
