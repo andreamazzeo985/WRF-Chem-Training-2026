@@ -1,0 +1,150 @@
+ &time_control
+ run_days                            = 0,
+ run_hours                           = 0,
+ run_minutes                         = 0,
+ run_seconds                         = 0,
+ start_year                          = 2023,  2023,  
+ start_month                         = 05,      05,  
+ start_day                           = 20,      20,  
+ start_hour                          = 00,      00,  
+ end_year                            = 2023,  2023,  
+ end_month                           = 05,      05,  
+ end_day                             = 03,      03,  
+ end_hour                            = 00,      00,  
+ interval_seconds                    = 21600
+ input_from_file                     = .true.,.true.,
+ history_interval                    = 60,       60, 
+ history_outname                     ='/mmfs1/scratch/hpc/46/mazzeo/data/WRF-Chem/HCHO_NO2/BASECASE/wrfout_d<domain>_<date>'
+ frames_per_outfile                  = 24,       24, 
+ restart                             = .false.,
+ restart_interval                    = 2880,
+ io_form_history                     = 2,
+ io_form_restart                     = 2,
+ io_form_input                       = 2,
+ io_form_boundary                    = 2,
+ 
+ io_form_auxinput5                   = 2,
+ frames_per_auxinput5                = 24,        24, 
+ auxinput5_inname                    = '/mmfs1/scratch/hpc/46/mazzeo/data/EMIS/CAMS-NAEI/cams-naei_glob_radm2_hw2019_0520-0901/wrfchemi_d<domain>_<date>.nc',
+ auxinput5_interval_m                = 60,       60,  
+ 
+ io_form_auxinput7                   = 2,
+ auxinput7_inname                    ='/mmfs1/scratch/hpc/46/mazzeo/data/EMIS/FINN/finn_out/radm2_2doms_radm2_v2/wrffirechemi_d<domain>_<date>'
+ auxinput7_interval_m                = 60,       60,  
+ frames_per_auxinput7                = 1,         1,  
+ 
+ io_form_auxinput6                   = 2,
+ frames_per_auxinput6                = 1,         1,  
+ auxinput6_inname                    = 'wrfbiochemi_d<domain>',
+
+ debug_level                         = 0,
+ force_use_old_data                  = T,
+ /
+ &domains
+ time_step                           = 24,
+ time_step_fract_num                 = 0,
+ time_step_fract_den                 = 1,
+ max_dom                             = 2,
+ e_we                                = 260,    217,  
+ e_sn                                = 260,    257,  
+ e_vert                              =  30,     30,  
+ p_top_requested                     = 5000,
+ num_metgrid_levels                  = 38,
+ num_metgrid_soil_levels             = 4,
+ dx                                  = 10000, 5000, 
+ dy                                  = 10000, 5000, 
+ grid_id                             = 1,     2,    
+ parent_id                           = 0,     1,    
+ i_parent_start                      = 1,     58,   
+ j_parent_start                      = 1,     84,   
+ parent_grid_ratio                   = 1,     2,    
+ parent_time_step_ratio              = 1,     2,    
+ feedback                            = 1,
+ smooth_option                       = 0,
+ eta_levels                          = 1.0,0.9975,0.9934541,0.9862051,0.9781773,0.969287
+                                       0.9594417,0.9485387,0.9364644,0.923093,0.9082852
+                                       0.8918865,0.8737262,0.8536149,0.8313431,0.8066786
+                                       0.7793645,0.7491161,0.7156181,0.6785215,0.6374396
+                                       0.5919444,0.5415616,0.4857664,0.4239771,0.3555498
+                                       0.2797716,0.1958525,0.1029182,0.0
+ /
+&physics
+ mp_physics                          =  5,     5,  
+ cu_physics                          =  5,     5,  
+ ra_lw_physics                       =  1,     1,  
+ ra_sw_physics                       =  2,     2,  
+ bl_pbl_physics                      =  2,     2,  
+ sf_sfclay_physics                   =  2,     2,  
+ sf_surface_physics                  =  2,     2,  
+ radt                                =  9,     9,  
+ bldt                                =  0,     0,  
+ cudt                                =  0,     0,  
+ num_soil_layers                     =  4,
+ num_land_cat                        = 21,
+ sf_urban_physics                    =  2,     2,  
+ maxiens                             =  1,
+ maxens                              =  3,
+ maxens2                             =  3,
+ maxens3                             = 16,
+ ensdim                              = 144,
+ progn                               = 0,
+ cu_rad_feedback                     = .false.,
+ /
+ &fdda
+ grid_fdda                =             1,      1,   
+ gfdda_inname             =       "wrffdda_d<domain>",
+ gfdda_end_h              =            24,     24,   
+ gfdda_interval_m         =           360,    360,   
+ fgdt                     =             0,      0,   
+ if_no_pbl_nudging_uv     =             0,      0,   
+ if_no_pbl_nudging_t      =             0,      0,   
+ if_no_pbl_nudging_q      =             0,      0,   
+ if_zfac_uv               =             0,      0,   
+ k_zfac_uv                =            10,     10,   
+ if_zfac_t                =             0,      0,   
+ k_zfac_t                 =            10,     10,   
+ if_zfac_q                =             0,      0,   
+ k_zfac_q                 =            10,     10,   
+ guv                      =        0.0003, 0.0003, 
+ gt                       =        0.0003, 0.0003, 
+ gq                       =        0.0003, 0.0003, 
+ if_ramping               =             1,
+ dtramp_min               =          60.0,
+ io_form_gfdda            =             2,
+ /
+
+ &dynamics
+ hybrid_opt                          = 2,
+ w_damping                           = 0,
+ diff_opt                            = 1,      1,  
+ km_opt                              = 4,      4,  
+ diff_6th_opt                        = 0,      0,  
+ diff_6th_factor                     = 0.12,   0.12,  
+ base_temp                           = 290.
+ damp_opt                            = 0,
+ zdamp                               = 5000.,  5000., 
+ dampcoef                            = 0.2,    0.2,   
+ khdif                               = 0,      0,     
+ kvdif                               = 0,      0,    
+ non_hydrostatic                     = .true., .true., 
+ moist_adv_opt                       = 1,      1,      
+ scalar_adv_opt                      = 1,      1,     
+ gwd_opt                             = 1,      0,     
+ /
+
+ &bdy_control
+ spec_bdy_width           = 5,
+ spec_zone                = 1,
+ relax_zone               = 4,
+ specified                = .true., .false., 
+ nested                   = .false., .true., 
+ /
+  &grib2
+ /
+
+ &namelist_quilt
+ nio_tasks_per_group = 0,
+ nio_groups = 1,
+ /
+
+ &grib2
