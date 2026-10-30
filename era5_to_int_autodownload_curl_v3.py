@@ -369,7 +369,7 @@ WGET_RETRIES = 3
 WGET_RETRY_WAIT = 5
 RETRY_WAIT = 60
 MIN_FILE_SIZE = 1000
-MAX_DOWNLOAD_ATTEMPTS = 5
+MAX_DOWNLOAD_ATTEMPTS = 10  # 0 means retry indefinitely (use with care on SLURM)
 
 
 def _remote_url_for_era5_file(filename, yyyy, mm):
@@ -414,6 +414,7 @@ def _get_remote_size(url):
 
     command = [
         curl,
+        "-k", 
         "--location",
         "--fail",
         "--silent",
@@ -672,51 +673,48 @@ def download_missing_era5_file(var, validtime, target_directory):
             print(">> Existing file is too small to resume; removing it.")
             os.remove(target)
 
-    for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
-
-        print()
+    attempt = 0
+    while MAX_DOWNLOAD_ATTEMPTS == 0 or attempt < MAX_DOWNLOAD_ATTEMPTS:
+        attempt += 1
+        print("\n" + "-" * 70)
+        print("DOWNLOAD ATTEMPT {} / {}".format(
+            attempt, MAX_DOWNLOAD_ATTEMPTS if MAX_DOWNLOAD_ATTEMPTS else "unlimited"))
         print("-" * 70)
-        print(f"DOWNLOAD ATTEMPT {attempt}/{MAX_DOWNLOAD_ATTEMPTS}")
-        print("-" * 70)
 
-        resume = (
-            os.path.exists(target)
-            and os.path.getsize(target) >= MIN_FILE_SIZE
-        )
-
+        resume = os.path.exists(target) and os.path.getsize(target) >= MIN_FILE_SIZE
         status = _run_curl(target, url, resume=resume)
-
-        if status == 0 and _local_file_complete(target, remote_size, var, validtime):
-            print()
-            print(">> DOWNLOAD COMPLETE")
-            print(">>", target)
+        valid = _local_file_complete(target, remote_size, var, validtime)
+        if status == 0 and valid:
+            print("\n>> DOWNLOAD COMPLETE AND VALIDATED\n>>", target)
             return target
 
+        # A transfer may exit 0 even when the NetCDF file is invalid.
+        # Never endlessly resume a fully downloaded but invalid file.
         if os.path.exists(target):
             local_size = os.path.getsize(target)
-            print(">> File is still incomplete:", local_size, "bytes")
+            print(">> Download not accepted: curl={}, size={}, valid={}".format(
+                status, local_size, valid))
+            should_restart = (
+                (remote_size is not None and local_size >= remote_size)
+                or (status == 0 and not valid)
+                or (status == -998)
+            )
+            if should_restart:
+                print(">> Removing invalid/stalled download; next attempt starts fresh")
+                os.remove(target)
+            else:
+                print(">> Retaining partial file for a resumable retry")
 
-            # If a resume made no progress, restart from zero on the next pass.
-            if status in (-998, -999) and attempt < MAX_DOWNLOAD_ATTEMPTS:
-                print(">> Resume stalled; removing partial file before retry.")
-                try:
-                    os.remove(target)
-                except OSError as exc:
-                    print(">> WARNING: could not remove partial file:", exc)
-
-        if attempt < MAX_DOWNLOAD_ATTEMPTS:
-            print(f"-> Waiting {RETRY_WAIT} seconds before retry...")
-            time.sleep(RETRY_WAIT)
+        if MAX_DOWNLOAD_ATTEMPTS and attempt >= MAX_DOWNLOAD_ATTEMPTS:
+            break
+        print("-> Waiting {} seconds before retry...".format(RETRY_WAIT))
+        time.sleep(RETRY_WAIT)
 
     raise RuntimeError(
-        "Automatic ERA5 download failed after "
-        f"{MAX_DOWNLOAD_ATTEMPTS} attempts:\n"
-        f"  WPS variable : {var.WPSname}\n"
-        f"  ERA5 variable: {var.ERA5name}\n"
-        f"  Valid time   : {validtime}\n"
-        f"  File         : {basename}\n"
-        f"  URL          : {url}"
-    )
+        "Automatic ERA5 download failed after {} attempts:\n"
+        "  WPS variable : {}\n  ERA5 variable: {}\n  Valid time   : {}\n"
+        "  File         : {}\n  URL          : {}".format(
+            attempt, var.WPSname, var.ERA5name, validtime, basename, url))
 
 
 
@@ -917,7 +915,12 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--path', help='the local path to search for ERA5 netCDF files')
     parser.add_argument('-i', '--isobaric', action='store_true', help='use ERA5 pressure-level data rather than model-level data')
     parser.add_argument('-v', '--variables', help='a comma-separated list, without spaces, of WPS variable names to process')
+    parser.add_argument('--download-attempts', type=int, default=10, help='maximum download attempts per file (0=unlimited; default: 10)')
+    parser.add_argument('--download-only', action='store_true', help='download and validate inputs without converting')
     args = parser.parse_args()
+    if args.download_attempts < 0:
+        parser.error('--download-attempts must be >= 0')
+    MAX_DOWNLOAD_ATTEMPTS = args.download_attempts
 
     try:
         startDate, endDate, intvH = handle_datetime_args(args)
@@ -1010,6 +1013,49 @@ if __name__ == '__main__':
             sys.exit(1)
 
         var_set = user_var_set
+
+    # PRE-FLIGHT: do not start writing any WPS intermediate file until
+    # every required input for the full requested period is available.
+    # Deduplicate monthly/daily files, but check every requested timestamp.
+    if paths is not None:
+        print("\n" + "=" * 70)
+        print("ERA5 INPUT PRE-FLIGHT: validating all requested timestamps")
+        print("=" * 70)
+        required = {}
+        checkDate = startDate
+        while checkDate <= endDate:
+            validtime = datetime_to_string(checkDate)
+            yyyy, mm, dd, hh = string_to_yyyymmddhh(validtime)
+            for v in int_vars:
+                if v.WPSname not in var_set:
+                    continue
+                basename = v.ERA5file.format(
+                    v.beginDateFn(yyyy, mm, dd, hh),
+                    v.endDateFn(yyyy, mm, dd, hh))
+                key = (basename, v.ERA5name)
+                if key not in required:
+                    required[key] = (v, [])
+                required[key][1].append(validtime)
+            checkDate += intvH
+
+        print('Distinct required ERA5 files:', len(required))
+        for n, key in enumerate(sorted(required), 1):
+            v, validtimes = required[key]
+            print('[{}/{}] {} ({} requested times)'.format(
+                n, len(required), key[0], len(validtimes)), flush=True)
+            # Download once, then verify all required time records.
+            filename = find_era5_file(v, validtimes[0], localpaths=paths)
+            for validtime in validtimes:
+                if not _local_file_complete(filename, None, v, validtime):
+                    raise RuntimeError(
+                        'Pre-flight failed: {} lacks valid {} data for {}'.format(
+                            filename, v.ERA5name, validtime))
+        print('PRE-FLIGHT COMPLETE: all required ERA5 files validated', flush=True)
+        if args.download_only:
+            print('Download-only mode: no WPS intermediate files written')
+            sys.exit(0)
+    elif args.download_only:
+        parser.error('--download-only requires -p/--path')
 
     currDate = startDate
     while currDate <= endDate:
@@ -1118,5 +1164,8 @@ if __name__ == '__main__':
         intfile.close()
 
         currDate += intvH
+
+
+
 
 
